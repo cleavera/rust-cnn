@@ -66,10 +66,10 @@ fn main() {
                         Label::B => -1.
                     };
 
-                    network.train(&vec![p.position.0, p.position.1], vec![expected], 0.001);
+                    network.train(vec![p.position.0, p.position.1], vec![expected], 0.001);
                 }
 
-                let guess = match network.feed_forward(&vec![p.position.0, p.position.1])[0] > 0. {
+                let guess = match network.feed_forward(vec![p.position.0, p.position.1])[0] > 0. {
                     true => Label::A,
                     false => Label::B,
                 };
@@ -133,9 +133,9 @@ fn normalise_position(position: Position, width: i32, height: i32) -> Position {
 fn guess_y(x: f32, network: &Network) -> f32 {
     let output_layer = network.get_output_layer();
 
-    let w0 = output_layer.nodes[0].weights[0].value;
-    let w1 = output_layer.nodes[0].weights[1].value;
-    let w2 = output_layer.nodes[0].weights[2].value;
+    let w0 = output_layer.weights.get(0, 0);
+    let w1 = output_layer.weights.get(0, 1);
+    let w2 = output_layer.weights.get(0, 2);
 
     return -(w2/w1) - (w0/w1) * x;
 }

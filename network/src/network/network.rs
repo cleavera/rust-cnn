@@ -1,3 +1,4 @@
+use crate::network::matrix::Matrix;
 use super::Layer;
 
 pub struct Network {
@@ -13,23 +14,24 @@ impl Network {
         };
     }
 
-    pub fn feed_forward(&self, inputs: &Vec<f32>) -> Vec<f32> {
-        return self.layers.feed_forward(inputs);
+    pub fn feed_forward(&self, inputs: Vec<f32>) -> Vec<f32> {
+        return self.layers.feed_forward(Matrix::from_vec(inputs)).elements;
     }
 
-    pub fn train(&mut self, inputs: &Vec<f32>, expected: Vec<f32>, learning_rate: f32) -> () {
-        let guess = self.feed_forward(inputs);
+    pub fn train(&mut self, inputs: Vec<f32>, expected: Vec<f32>, learning_rate: f32) -> () {
+        let guess = self.feed_forward(inputs.clone());
         let mut error = 0.;
 
         for (i, _) in guess.iter().enumerate() {
             error += expected[i] - guess[i];
         }
 
-        let bias = 1.;
+        let bias_input = 1.;
 
-        for node in self.layers.nodes.iter_mut() {
-            for (i, w) in node.weights.iter_mut().enumerate() {
-                w.adjust(error * inputs.get(i).unwrap_or(&bias) * learning_rate);
+        for node_index in 0..self.layers.weights.cols {
+            for weight_index in 0..self.layers.weights.rows {
+                let weight = self.layers.weights.get(node_index, weight_index);
+                self.layers.weights.set(node_index, weight_index, weight + (error * inputs.get(weight_index).unwrap_or(&bias_input) * learning_rate))
             }
         }
     }
