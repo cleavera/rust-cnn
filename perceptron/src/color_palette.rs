@@ -19,10 +19,6 @@ impl ColorPalette {
         Color::new(0xff, 0xff, 0, 0)
     }
 
-    pub fn line_guess() -> Color {
-        Color::new(0xff, 0, 0xff, 0)
-    }
-
     pub fn background() -> Color {
         Color::new(0xff, 0xff, 0xff, 0xff)
     }

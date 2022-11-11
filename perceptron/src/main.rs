@@ -52,10 +52,11 @@ fn main() {
     };
 
     let mut dataset = DataSet::generate(BATCH_SIZE, &f);
-    let mut network = Network::create(vec![1], 2);
+    let mut network = Network::create(vec![2], 2);
     let mut generation = -1;
     let mut fps = FPSCounter::new();
-    let mut error = 0.;
+    let mut correct;
+    let mut accuracy = 0.;
     let mut auto_play = false;
 
     while window.is_open() {
@@ -83,59 +84,58 @@ fn main() {
         }
 
         if do_training || generation == -1 {
-            error = 0.;
+            correct = 0.;
             dt.clear(SolidSource::from(ColorPalette::background()));
 
             if do_training {
                 let batch = dataset.points.iter().map(|p| {
                     let expected = match p.label {
-                        Label::A => 1.,
-                        Label::B => -1.
+                        Label::A => vec![1., 0.],
+                        Label::B => vec![0., 1.],
                     };
 
-                    return TrainingBatch{ input: vec![p.position.0, p.position.1], expected: vec![expected]};
+                    return TrainingBatch{ input: vec![p.position.0, p.position.1], expected};
                 }).collect::<Vec<TrainingBatch>>();
 
                 network.train(batch, 0.1);
             }
 
             for p in dataset.points.iter_mut() {
-                let guess_value = network.feed_forward(vec![p.position.0, p.position.1])[0];
+                let guess_value = network.feed_forward(vec![p.position.0, p.position.1]);
+                let mut max_index = 0;
 
-                let guess = match network.feed_forward(vec![p.position.0, p.position.1])[0] > 0. {
-                    true => Label::A,
-                    false => Label::B,
+                if guess_value[0] < guess_value[1] {
+                    max_index = 1;
+                }
+
+                let guess = match max_index {
+                    0 => Label::A,
+                    _ => Label::B,
                 };
+
+                if guess == p.label {
+                    correct += 1.;
+                }
 
                 p.guess = Some(guess);
-
-                let expected = match p.label {
-                    Label::A => 1.,
-                    Label::B => -1.
-                };
-
-                error += (expected - guess_value).powi(2);
 
                 point(&mut dt, &p, &point_stroke, p.guess.as_ref().unwrap());
             }
 
+            accuracy = correct / (dataset.points.len() as f32);
+
             line(&mut dt, (1., f.get_y(1.)), (-1., f.get_y(-1.)), &stroke, ColorPalette::line());
-            line(&mut dt, (1., guess_y(1., &network)), (-1., guess_y(-1., &network)), &stroke, ColorPalette::line_guess());
 
             if generation == -1 {
                 generation = 0;
             }
 
             window.update_with_buffer(dt.get_data(), size.0, size.1).unwrap();
-            error /= dataset.points.len() as f32;
         } else {
             window.update();
         }
 
-        let gb = guess_y(0., &network);
-        let gm = guess_y(1., &network) - guess_y(0., &network);
-
-        window.set_title(format!("y = {}x + {} | y = {}x + {} | Error: {} | Generation: {} | Points: {} | FPS: {}", f.m, f.c, gm, gb, error, generation.to_string(), dataset.points.len(), fps.tick()).as_str());
+        window.set_title(format!("y = {}x + {} | Accuracy: {}% | Generation: {} | Points: {} | FPS: {}", f.m, f.c, accuracy * 100., generation.to_string(), dataset.points.len(), fps.tick()).as_str());
     }
 }
 
@@ -172,14 +172,4 @@ fn line(dt: &mut DrawTarget, start: Position, end: Position, stroke: &StrokeStyl
 
 fn normalise_position(position: Position, width: i32, height: i32) -> Position {
     return ((position.0 + 1.) * ((width / 2) as f32), (height as f32) - ((position.1 + 1.) * ((height / 2) as f32)));
-}
-
-fn guess_y(x: f32, network: &Network) -> f32 {
-    let output_layer = network.get_output_layer();
-
-    let w0 = output_layer.weights.get(0, 0);
-    let w1 = output_layer.weights.get(0, 1);
-    let w2 = output_layer.weights.get(0, 2);
-
-    return -(w2 / w1) - (w0 / w1) * x;
 }
