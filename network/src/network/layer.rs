@@ -21,4 +21,8 @@ impl Layer {
 
         return Matrix::matrix_multiplication(&inputs_with_bias, &self.weights).unwrap();
     }
+
+    pub fn adjust_weights(&mut self, adjustment: &Matrix) -> () {
+        self.weights = Matrix::addition(&self.weights, adjustment).unwrap();
+    }
 }

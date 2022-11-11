@@ -20,6 +20,17 @@ impl Matrix {
         return Matrix::create(elements.len(), 1, elements);
     }
 
+    pub fn map<F>(m: &Matrix, mapper: F) -> Matrix
+    where
+        F: Fn(&f32) -> f32 {
+
+        return Matrix {
+            rows: m.rows,
+            cols: m.cols,
+            elements: m.elements.iter().map(mapper).collect::<Vec<f32>>()
+        };
+    }
+
     pub fn addition(m1: &Matrix, m2: &Matrix) -> Result<Matrix, MatrixAdditionOperationError> {
         if m1.rows != m2.rows || m1.cols != m2.cols {
             return Err(MatrixAdditionOperationError::MatricesShapesDoNotMatch);
@@ -42,12 +53,12 @@ impl Matrix {
         });
     }
 
+    pub fn subtraction(m1: &Matrix, m2: &Matrix) -> Result<Matrix, MatrixAdditionOperationError> {
+        return Matrix::addition(m1, &Matrix::scalar_multiplication(m2, -1.));
+    }
+
     pub fn scalar_multiplication(m: &Matrix, s: f32) -> Matrix {
-        return Matrix {
-            cols: m.cols,
-            rows: m.rows,
-            elements: m.elements.iter().map(|e| e * s).collect::<Vec<f32>>(),
-        };
+        return Matrix::map(m, |e| e * s);
     }
 
     pub fn transposition(m: &Matrix) -> Matrix {
@@ -142,6 +153,28 @@ impl Matrix {
         });
     }
 
+    pub fn hadamard(m1: &Matrix, m2: &Matrix) -> Result<Matrix, MatrixHadamardOperationError> {
+        if m1.rows != m2.rows || m1.cols != m2.cols {
+            return Err(MatrixHadamardOperationError::MatricesShapesDoNotMatch);
+        }
+
+        if m1.elements.len() != m2.elements.len() {
+            return Err(MatrixHadamardOperationError::MatricesHaveDifferentNumberOfElements);
+        }
+
+        let mut result_elements = vec![];
+
+        for i in 0..m1.elements.len() {
+            result_elements.push(m1.elements[i] * m2.elements[i]);
+        }
+
+        return Ok(Matrix {
+            cols: m1.cols,
+            rows: m1.rows,
+            elements: result_elements,
+        });
+    }
+
     pub fn get(&self, col: usize, row: usize) -> f32 {
         let index = row * self.cols + col;
 
@@ -201,9 +234,15 @@ pub enum MatrixExtendOperationError {
     NotEnoughValuesToExtend,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum MatrixHadamardOperationError {
+    MatricesShapesDoNotMatch,
+    MatricesHaveDifferentNumberOfElements,
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::network::matrix::{Matrix, MatrixAdditionOperationError, MatrixExtendOperationError, MatrixMultiplicationOperationError};
+    use crate::network::matrix::{Matrix, MatrixAdditionOperationError, MatrixExtendOperationError, MatrixHadamardOperationError, MatrixMultiplicationOperationError};
 
     #[test]
     fn addition() {
@@ -230,6 +269,36 @@ mod tests {
         let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
         let m2 = Matrix::create(3, 2, vec![5.2, 8., 3., 4., 0.]);
         match Matrix::addition(&m1, &m2) {
+            Ok(_) => panic!("Should error"),
+            Err(e) => assert_eq!(e, MatrixAdditionOperationError::MatricesHaveDifferentNumberOfElements),
+        };
+    }
+
+    #[test]
+    fn subtraction() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 4., 4., 7.]);
+        let m2 = Matrix::create(3, 2, vec![5.2, 8., 3., 1., 0., 6.]);
+        let expected = Matrix::create(3, 2, vec![-5.2, -6., 0., 3., 4., 1.]);
+        let result = Matrix::subtraction(&m1, &m2).expect("Could not add");
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn subtraction_mismatch_shapes() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
+        let m2 = Matrix::create(2, 3, vec![5.2, 8., 3., 4., 0., 7.]);
+        match Matrix::subtraction(&m1, &m2) {
+            Ok(_) => panic!("Should error"),
+            Err(e) => assert_eq!(e, MatrixAdditionOperationError::MatricesShapesDoNotMatch),
+        };
+    }
+
+    #[test]
+    fn subtraction_missing_elements() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
+        let m2 = Matrix::create(3, 2, vec![5.2, 8., 3., 4., 0.]);
+        match Matrix::subtraction(&m1, &m2) {
             Ok(_) => panic!("Should error"),
             Err(e) => assert_eq!(e, MatrixAdditionOperationError::MatricesHaveDifferentNumberOfElements),
         };
@@ -320,6 +389,36 @@ mod tests {
         match Matrix::extend_rows(&m1, values) {
             Ok(_) => panic!("Should error"),
             Err(e) => assert_eq!(e, MatrixExtendOperationError::NotEnoughValuesToExtend),
+        };
+    }
+
+    #[test]
+    fn hadamard() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
+        let m2 = Matrix::create(3, 2, vec![5.2, 8., 3., 4., 0., 7.]);
+        let expected = Matrix::create(3, 2, vec![0., 16., 9., 4., 0., 42.]);
+        let result = Matrix::hadamard(&m1, &m2).expect("Could not hadamard");
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn hadamard_mismatch_shapes() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
+        let m2 = Matrix::create(2, 3, vec![5.2, 8., 3., 4., 0., 7.]);
+        match Matrix::hadamard(&m1, &m2) {
+            Ok(_) => panic!("Should error"),
+            Err(e) => assert_eq!(e, MatrixHadamardOperationError::MatricesShapesDoNotMatch),
+        };
+    }
+
+    #[test]
+    fn hadamard_missing_elements() {
+        let m1 = Matrix::create(3, 2, vec![0., 2., 3., 1., 4., 6.]);
+        let m2 = Matrix::create(3, 2, vec![5.2, 8., 3., 4., 0.]);
+        match Matrix::hadamard(&m1, &m2) {
+            Ok(_) => panic!("Should error"),
+            Err(e) => assert_eq!(e, MatrixHadamardOperationError::MatricesHaveDifferentNumberOfElements),
         };
     }
 }

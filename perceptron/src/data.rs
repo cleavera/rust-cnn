@@ -23,6 +23,10 @@ impl DataSet {
             self.points.push(DataPoint::random(classifier));
         }
     }
+
+    pub fn reset(&mut self) -> () {
+        self.points = vec![];
+    }
 }
 
 pub struct DataPoint {
