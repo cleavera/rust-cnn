@@ -1,4 +1,5 @@
 use rand::random;
+use crate::network::activation::relu::Relu;
 use crate::network::matrix::Matrix;
 
 pub struct Layer {
@@ -19,7 +20,7 @@ impl Layer {
     pub fn feed_forward(&self, inputs: Matrix) -> Matrix {
         let inputs_with_bias = Matrix::extend_rows(&inputs, vec![1.]).unwrap();
 
-        return Matrix::matrix_multiplication(&inputs_with_bias, &self.weights).unwrap();
+        return Relu::activate(&Matrix::matrix_multiplication(&inputs_with_bias, &self.weights).unwrap());
     }
 
     pub fn adjust_weights(&mut self, adjustment: &Matrix) -> () {

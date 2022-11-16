@@ -1,3 +1,4 @@
+use crate::network::activation::relu::Relu;
 use crate::network::matrix::Matrix;
 use crate::network::TrainingBatch;
 use super::Layer;
@@ -34,6 +35,15 @@ impl Network {
         // g = x(xm - t)
         // y = xm
         // e = y - t
+        // g = xe
+
+        // With an activation function it becomes 2xf'(xm)(f(xm)-t)
+        // g = xf'(xm)(f(xm)-t)
+        // y = xm
+        // e = f(y) - t
+        // df = f'(y)
+        // r = df*e
+        // g = x*r
 
         let layer = self.get_output_layer();
         let mut nudge: Option<Matrix> = None;
@@ -43,8 +53,11 @@ impl Network {
             let x = Matrix::extend_rows(&Matrix::from_vec(b.input), vec![1.]).unwrap();
             let t = Matrix::from_vec(b.expected);
             let y = Matrix::matrix_multiplication(&x, &layer.weights).unwrap();
-            let e = Matrix::subtraction(&y, &t).unwrap();
-            let g = Matrix::matrix_multiplication(&Matrix::transposition(&x), &e).unwrap();
+            let fy = Relu::activate(&y);
+            let e = Matrix::subtraction(&fy, &t).unwrap();
+            let df = Relu::derivative(&y);
+            let r = Matrix::hadamard(&df, &e).unwrap();
+            let g = Matrix::matrix_multiplication(&Matrix::transposition(&x), &r).unwrap();
 
             nudge = match nudge {
                 None => Some(g),

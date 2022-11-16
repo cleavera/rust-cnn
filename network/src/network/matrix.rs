@@ -16,6 +16,20 @@ impl Matrix {
         };
     }
 
+    pub fn identity(size: usize) -> Matrix {
+        let mut elements = vec![0.; size * size];
+
+        for x in 0..(size) {
+            elements[(x * size) + x] = 1.;
+        }
+
+        return Matrix {
+            cols: size,
+            rows: size,
+            elements,
+        };
+    }
+
     pub fn from_vec(elements: Vec<f32>) -> Matrix {
         return Matrix::create(elements.len(), 1, elements);
     }
@@ -186,6 +200,10 @@ impl Matrix {
 
         self.elements[index] = value;
     }
+
+    pub fn sum(&self) -> f32 {
+        return self.elements.iter().fold(0., |acc, e| e + acc);
+    }
 }
 
 impl PartialEq for Matrix {
@@ -243,6 +261,14 @@ pub enum MatrixHadamardOperationError {
 #[cfg(test)]
 mod tests {
     use crate::network::matrix::{Matrix, MatrixAdditionOperationError, MatrixExtendOperationError, MatrixHadamardOperationError, MatrixMultiplicationOperationError};
+
+    #[test]
+    fn identity() {
+        let m = Matrix::identity(3);
+        let expected = Matrix::create(3, 3, vec![1., 0., 0., 0., 1., 0., 0., 0., 1.]);
+
+        assert_eq!(m, expected);
+    }
 
     #[test]
     fn addition() {
@@ -420,5 +446,12 @@ mod tests {
             Ok(_) => panic!("Should error"),
             Err(e) => assert_eq!(e, MatrixHadamardOperationError::MatricesHaveDifferentNumberOfElements),
         };
+    }
+
+    #[test]
+    fn sum() {
+        let m = Matrix::create(3, 2, vec![0., 2., 5., 8., 1.]);
+
+        assert_eq!(m.sum(), 16.);
     }
 }
