@@ -124,7 +124,7 @@ fn main() {
 
             accuracy = correct / (dataset.points.len() as f32);
 
-            line(&mut dt, (1., f.get_y(1.)), (-1., f.get_y(-1.)), &stroke, ColorPalette::line());
+            draw_function(&mut dt, &f, &stroke, ColorPalette::line());
 
             if generation == -1 {
                 generation = 0;
@@ -168,6 +168,15 @@ fn line(dt: &mut DrawTarget, start: Position, end: Position, stroke: &StrokeStyl
     pb.line_to(normalised_end_position.0, normalised_end_position.1);
     let path = pb.finish();
     dt.stroke(&path, &Source::Solid(SolidSource::from(color)), stroke, &DrawOptions::new());
+}
+
+fn draw_function(dt: &mut DrawTarget, f: &Function, stroke: &StrokeStyle, color: Color) -> () {
+    for i in -100 .. 100 {
+        let x = (i as f32) / 100.;
+        let dx = x + 0.01;
+
+        line(dt, (x, f.get_y(x)), (dx, f.get_y(dx)), &stroke, color);
+    }
 }
 
 fn normalise_position(position: Position, width: i32, height: i32) -> Position {
