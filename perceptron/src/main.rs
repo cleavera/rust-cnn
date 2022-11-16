@@ -97,7 +97,7 @@ fn main() {
                     return TrainingBatch{ input: vec![p.position.0, p.position.1], expected};
                 }).collect::<Vec<TrainingBatch>>();
 
-                network.train(batch, 0.1);
+                network.train(batch, 0.5);
             }
 
             for p in dataset.points.iter_mut() {
